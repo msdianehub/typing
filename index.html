@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>校園英語打字練習 (Realtime DB版)</title>
+    <title>校園英語打字練習 (雲端正式版)</title>
     
+    <!-- 引入 Firebase SDK (使用 8.10.1 兼容版，最穩定適合單一檔案) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        /* CSS 樣式保持不變，維持手機優化 */
         :root { --primary: #4ecdc4; --secondary: #ff6b6b; --dark: #1a535c; --accent: #ffd166; --p1-color: #ff9f43; --p2-color: #54a0ff; --p3-color: #5f27cd; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Comic Sans MS', sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-x: hidden; overscroll-behavior: none;}
@@ -39,7 +39,6 @@
         .level-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } th { background: #eee; padding: 8px; white-space: nowrap;} td { padding: 8px 4px; border-bottom: 1px solid #eee; }
         
-        /* Loading 動畫 */
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
@@ -112,34 +111,30 @@
 
     <script>
         // ==========================================
-        // 🔥 請務必更新 Config (含 databaseURL) 🔥
+        // ✅ 已整合您的 Firebase 設定
         // ==========================================
         const firebaseConfig = {
-            apiKey: "請貼上APIKey",
-            authDomain: "你的project.firebaseapp.com",
-            // 🔥 Realtime DB 必須要有這個 URL，通常是 https://xxx.firebaseio.com
-            databaseURL: "請貼上你的DatabaseURL", 
-            projectId: "你的project-id",
-            storageBucket: "你的project.appspot.com",
-            messagingSenderId: "ID",
-            appId: "AppID"
+            apiKey: "AIzaSyDU6GWmH-rgvqWvGC45hhqXE_p9wmErxaM",
+            authDomain: "typing-1124d.firebaseapp.com",
+            databaseURL: "https://typing-1124d-default-rtdb.firebaseio.com",
+            projectId: "typing-1124d",
+            storageBucket: "typing-1124d.firebasestorage.app",
+            messagingSenderId: "869820976054",
+            appId: "1:869820976054:web:cda9b912219efff0ee8f17",
+            measurementId: "G-PHW409K7M3"
         };
 
         let dbRef;
         try {
             if (!firebase.apps.length) {
-                if(!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("請貼上")) {
-                    alert("錯誤：請在 HTML 代碼中填寫 databaseURL！");
-                } else {
-                    firebase.initializeApp(firebaseConfig);
-                    // 🔥 使用 database() 而不是 firestore()
-                    dbRef = firebase.database().ref('scores');
-                    console.log("Realtime DB initialized");
-                }
+                firebase.initializeApp(firebaseConfig);
+                // 初始化 Realtime Database 參照
+                dbRef = firebase.database().ref('scores');
+                console.log("Database initialized successfully!");
             }
         } catch (e) {
             console.error("Firebase Init Error:", e);
-            alert("資料庫連線失敗，請檢查 Config");
+            alert("初始化失敗：" + e.message);
         }
 
         const sfx = {
@@ -179,7 +174,6 @@
             state: { player: {}, grade: "P1", level: 1, score: 0, time: 60, playing: false, word: "", timer: null },
             
             init: function() {
-                // 綁定事件
                 const bind = (id, fn) => document.getElementById(id).onclick = (e) => { e.preventDefault(); fn(); };
                 bind('login-btn', () => this.login());
                 bind('start-btn', () => this.start());
@@ -302,7 +296,6 @@
                 document.getElementById('result-overlay').classList.remove('hidden');
             },
 
-            // 🔥 Realtime DB 儲存邏輯
             save: function() {
                 if(!dbRef) return;
                 const now = new Date();
@@ -317,12 +310,16 @@
                 });
             },
 
-            // 🔥 Realtime DB 讀取邏輯
             showRank: function(grade) {
                 document.getElementById('rank-overlay').classList.remove('hidden');
                 document.querySelector('#rank-table tbody').innerHTML = "";
                 document.getElementById('rank-loading').classList.remove('hidden');
                 document.getElementById('rank-msg').innerText = "";
+                
+                // 切換按鈕狀態
+                document.querySelectorAll('#rank-tabs .grade-btn').forEach(b => b.classList.remove('active'));
+                const targetBtn = Array.from(document.querySelectorAll('#rank-tabs .grade-btn')).find(b => b.innerText.includes(grade));
+                if(targetBtn) targetBtn.classList.add('active');
                 
                 if(!dbRef) {
                     document.getElementById('rank-loading').classList.add('hidden');
@@ -330,17 +327,11 @@
                     return;
                 }
 
-                // 在 Realtime DB 根據 Grade 抓資料
                 dbRef.orderByChild('grade').equalTo(grade).once('value')
                 .then((snapshot) => {
                     let records = [];
-                    snapshot.forEach((child) => {
-                        records.push(child.val());
-                    });
-                    
-                    // 前端排序 (分數高 -> 低)
+                    snapshot.forEach((child) => { records.push(child.val()); });
                     records.sort((a,b) => b.score - a.score);
-                    // 取前 50
                     records = records.slice(0, 50);
 
                     document.getElementById('rank-loading').classList.add('hidden');
