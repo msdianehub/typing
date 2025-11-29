@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>校園英語打字練習 (雲端正式版)</title>
+    <title>英語打字練習 </title>
     
     <!-- 引入 Firebase SDK (使用 8.10.1 兼容版，最穩定適合單一檔案) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -48,15 +48,15 @@
 
     <div class="modal-overlay" id="login-overlay">
         <div class="modal-box">
-            <h2 style="color: var(--secondary); margin-bottom: 15px;">👋 歡迎來到打字練習</h2>
-            <input type="text" class="login-input" id="login-class" placeholder="班別 (Class): 1A" autocorrect="off">
-            <input type="text" class="login-input" id="login-name" placeholder="姓名 (Name): 陳小明" autocorrect="off">
-            <button class="btn btn-start" id="login-btn" style="margin-top: 15px;">進入練習</button>
+            <h2 style="color: var(--secondary); margin-bottom: 15px;">👋 Welcome to my hub</h2>
+            <input type="text" class="login-input" id="login-class" placeholder="Class: 1A" autocorrect="off">
+            <input type="text" class="login-input" id="login-name" placeholder="Name: Diane" autocorrect="off">
+            <button class="btn btn-start" id="login-btn" style="margin-top: 15px;">Start</button>
         </div>
     </div>
 
     <div class="container">
-        <h1>🏫 校園英語打字練習</h1>
+        <h1>🏫 ESLCLGG</h1>
         <div class="info-header">
             <div class="player-info">學生: <span id="display-name">---</span> (<span id="display-class">---</span>)</div>
             <div class="game-stats">
@@ -72,29 +72,29 @@
         <div class="level-selector" id="level-container"></div>
         <div class="target-box" id="target-display">準備好了嗎？</div>
         <div style="margin-top: 15px;">
-            <input type="text" id="game-input" placeholder="點擊開始後輸入..." disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <input type="text" id="game-input" placeholder="點擊開始後輸入... Click start and start typeing" disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <div class="controls">
-            <button class="btn btn-start" id="start-btn">開始遊戲</button>
-            <button class="btn btn-reset" id="reset-btn" disabled>重置</button>
-            <button class="btn btn-rank" id="rank-btn">🏆 雲端排行榜</button>
+            <button class="btn btn-start" id="start-btn">開始遊戲Sstart</button>
+            <button class="btn btn-reset" id="reset-btn" disabled>重置Reset</button>
+            <button class="btn btn-rank" id="rank-btn">🏆 排行榜Leaderboard</button>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="rank-overlay">
         <div class="modal-box">
-            <h2>🏆 雲端排行榜</h2>
+            <h2>🏆 排行榜Leaderboard</h2>
             <div style="margin-bottom:10px; display:flex; justify-content:center; gap:5px;" id="rank-tabs">
-                <button class="grade-btn p1" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P1')">P1榜</button>
-                <button class="grade-btn p2" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P2')">P2榜</button>
-                <button class="grade-btn p3" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P3')">P3榜</button>
+                <button class="grade-btn p1" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P1')">P1</button>
+                <button class="grade-btn p2" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P2')">P2</button>
+                <button class="grade-btn p3" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P3')">P3</button>
             </div>
             
             <div id="rank-loading" class="hidden"><div class="spinner"></div></div>
             <div id="rank-msg" style="color:#666; font-size:0.9rem; margin:10px 0;"></div>
             
             <div style="max-height: 250px; overflow-y: auto;">
-                <table id="rank-table"><thead><tr><th>#</th><th>班</th><th>名</th><th>分</th><th>日</th><th>時</th></tr></thead><tbody></tbody></table>
+                <table id="rank-table"><thead><tr><th>#</th><th>班Class</th><th>學生Name</th><th>Score</th><th>日期Date</th><th>時間Time</th></tr></thead><tbody></tbody></table>
             </div>
             <button class="btn btn-start" style="margin-top: 15px;" onclick="document.getElementById('rank-overlay').classList.add('hidden')">關閉</button>
         </div>
@@ -102,7 +102,7 @@
 
     <div class="modal-overlay hidden" id="result-overlay">
         <div class="modal-box">
-            <h2>⏰ 時間到！</h2>
+            <h2>⏰ 時間到！Time's up</h2>
             <div style="font-size: 3.5rem; color: var(--secondary); margin: 10px 0;" id="final-score">0</div>
             <p id="final-msg" style="margin-bottom: 20px; font-weight:bold;"></p>
             <button class="btn btn-start" onclick="game.closeResult()">查看排名</button>
@@ -186,7 +186,7 @@
             login: function() {
                 const c = document.getElementById('login-class').value.trim();
                 const n = document.getElementById('login-name').value.trim();
-                if(!c || !n) return alert("請輸入班別和姓名");
+                if(!c || !n) return alert("請輸入班別和姓名 Input class and name");
                 sfx.correct();
                 this.state.player = {c, n};
                 document.getElementById('display-name').innerText = n;
@@ -210,8 +210,8 @@
                         b.onclick = (e) => { e.preventDefault(); if(!this.state.playing) { this.state.level=l; document.querySelectorAll('.level-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }};
                         box.appendChild(b);
                     });
-                } else { box.innerHTML = '<span style="color:#999">(綜合練習)</span>'; }
-                document.getElementById('target-display').innerText = `${g} 準備`;
+                } else { box.innerHTML = '<span style="color:#999"></span>'; }
+                document.getElementById('target-display').innerText = `${g} Get ready`;
             },
 
             start: function() {
@@ -239,7 +239,7 @@
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('reset-btn').disabled = true;
                 document.getElementById('timer').innerText = 60;
-                document.getElementById('target-display').innerText = "準備";
+                document.getElementById('target-display').innerText = "準備Get Ready";
             },
 
             next: function() {
@@ -292,7 +292,7 @@
                 this.save();
                 
                 document.getElementById('final-score').innerText = this.state.score;
-                document.getElementById('final-msg').innerText = `${this.state.player.n} | 表現不錯喔！`;
+                document.getElementById('final-msg').innerText = `${this.state.player.n} | 表現不錯喔！Not bad`;
                 document.getElementById('result-overlay').classList.remove('hidden');
             },
 
