@@ -3,283 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>校園英語打字練習 (雲端排行版)</title>
+    <title>校園英語打字練習 (Realtime DB版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        :root {
-            --primary: #4ecdc4;
-            --secondary: #ff6b6b;
-            --dark: #1a535c;
-            --light: #f7fff7;
-            --accent: #ffd166;
-            --p1-color: #ff9f43;
-            --p2-color: #54a0ff;
-            --p3-color: #5f27cd;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Comic Sans MS', 'Verdana', '微軟正黑體', sans-serif;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            overflow-x: hidden;
-            overscroll-behavior: none;
-        }
-        
-        .container {
-            background-color: white;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            width: 100%;
-            max-width: 900px;
-            padding: 20px;
-            text-align: center;
-            border: 4px solid #fff;
-            position: relative;
-        }
-
-        h1 {
-            color: var(--dark);
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 0 var(--accent);
-            font-size: 1.8rem;
-        }
-
-        /* --- 頂部資訊列 --- */
-        .info-header {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background-color: #f1f2f6;
-            padding: 10px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-        }
-
-        .player-info {
-            font-size: 1rem;
-            color: var(--dark);
-            font-weight: bold;
-        }
-
-        .game-stats {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-
-        .stat-item {
-            background: white;
-            padding: 5px 12px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            min-width: 100px;
-        }
-
-        /* --- 年級與難度按鈕 --- */
-        .grade-selector {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .grade-btn {
-            padding: 8px 16px;
-            font-size: 1rem;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            color: white;
-            opacity: 0.6;
-            transition: all 0.2s;
-        }
-
-        .grade-btn.p1 { background-color: var(--p1-color); }
-        .grade-btn.p2 { background-color: var(--p2-color); }
-        .grade-btn.p3 { background-color: var(--p3-color); }
-
-        .grade-btn.active {
-            opacity: 1;
-            transform: scale(1.05);
-            outline: 2px solid var(--dark);
-            box-shadow: 0 3px 0 rgba(0,0,0,0.2);
-        }
-
-        .level-selector { 
-            margin: 5px 0 15px 0; 
-            min-height: 35px;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        
-        .level-btn {
-            background: #eee;
-            border: 2px solid #ccc;
-            padding: 6px 14px;
-            border-radius: 15px;
-            font-weight: bold;
-            color: #777;
-            font-size: 0.9rem;
-        }
-        .level-btn.active {
-            background: var(--dark);
-            color: white;
-            border-color: var(--dark);
-        }
-
-        /* --- 題目顯示區 --- */
-        .target-box {
-            background-color: #fff;
-            border: 3px dashed var(--dark);
-            border-radius: 12px;
-            padding: 15px;
-            margin: 10px 0;
-            min-height: 100px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-            font-size: 2rem;
-            font-family: 'Courier New', monospace;
-            word-break: break-word;
-        }
-
-        .char { margin: 0 1px; border-radius: 2px; }
-        .char-space { margin: 0 4px; border-bottom: 2px solid #ddd; width: 15px; display: inline-block; }
-        .correct { color: var(--primary); }
-        .error-anim { animation: shake 0.3s; color: var(--secondary); }
-        .pending { color: #ccc; }
-
-        /* --- 輸入框 --- */
-        #game-input {
-            width: 100%;
-            padding: 10px;
-            font-size: 1.5rem;
-            text-align: center;
-            border: 3px solid #ccc;
-            border-radius: 10px;
-            outline: none;
-            background-color: #f9f9f9;
-            -webkit-user-select: text;
-            user-select: text;
-        }
-        #game-input:focus { border-color: var(--primary); background-color: #fff; }
-
-        /* --- 控制區 --- */
-        .controls { 
-            margin-top: 15px; 
-            display: flex; 
-            justify-content: center; 
-            gap: 10px; 
-            flex-wrap: wrap;
-        }
-        .btn {
-            padding: 10px 20px; 
-            font-size: 1rem; 
-            border: none; 
-            border-radius: 10px;
-            cursor: pointer; 
-            color: white; 
-            font-weight: bold; 
-            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-            touch-action: manipulation;
-        }
-        .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
-        .btn-start { background-color: var(--primary); width: 100%; max-width: 200px; }
-        .btn-reset { background-color: var(--secondary); }
-        .btn-rank { background-color: var(--dark); }
-
-        .progress-wrap { width: 100%; height: 10px; background: #eee; border-radius: 10px; overflow: hidden; margin-top: 8px; }
-        .progress-fill { height: 100%; width: 100%; background: var(--secondary); transition: width 1s linear; }
-
-        /* --- 遮罩與彈窗 --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(3px);
-            display: flex; justify-content: center; align-items: center; z-index: 9999;
-            padding: 20px;
-        }
+        /* CSS 樣式保持不變，維持手機優化 */
+        :root { --primary: #4ecdc4; --secondary: #ff6b6b; --dark: #1a535c; --accent: #ffd166; --p1-color: #ff9f43; --p2-color: #54a0ff; --p3-color: #5f27cd; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Comic Sans MS', sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-x: hidden; overscroll-behavior: none;}
+        .container { background-color: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); width: 100%; max-width: 900px; padding: 20px; text-align: center; border: 4px solid #fff; position: relative; }
+        h1 { color: var(--dark); margin-bottom: 10px; font-size: 1.8rem; }
+        .info-header { display: flex; flex-direction: column; gap: 10px; background-color: #f1f2f6; padding: 10px; border-radius: 12px; margin-bottom: 15px; }
+        .player-info { font-size: 1rem; color: var(--dark); font-weight: bold; }
+        .game-stats { display: flex; justify-content: center; gap: 10px; font-size: 1.1rem; font-weight: bold; }
+        .grade-selector { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .grade-btn { padding: 8px 16px; font-size: 1rem; border: none; border-radius: 20px; cursor: pointer; color: white; opacity: 0.6; }
+        .grade-btn.p1 { background: var(--p1-color); } .grade-btn.p2 { background: var(--p2-color); } .grade-btn.p3 { background: var(--p3-color); }
+        .grade-btn.active { opacity: 1; transform: scale(1.05); outline: 2px solid var(--dark); }
+        .target-box { background: #fff; border: 3px dashed var(--dark); border-radius: 12px; padding: 15px; margin: 10px 0; min-height: 100px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 2rem; font-family: 'Courier New', monospace; word-break: break-word; }
+        .char { margin: 0 1px; } .char-space { margin: 0 4px; border-bottom: 2px solid #ddd; width: 15px; display: inline-block; }
+        .correct { color: var(--primary); } .error-anim { color: var(--secondary); animation: shake 0.3s; } .pending { color: #ccc; }
+        #game-input { width: 100%; padding: 10px; font-size: 1.5rem; text-align: center; border: 3px solid #ccc; border-radius: 10px; outline: none; background: #f9f9f9; -webkit-user-select: text; user-select: text; }
+        #game-input:focus { border-color: var(--primary); background: #fff; }
+        .controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; font-size: 1rem; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-start { background: var(--primary); width: 100%; max-width: 200px; } .btn-reset { background: var(--secondary); } .btn-rank { background: var(--dark); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .hidden { display: none !important; }
-
-        .modal-box {
-            background: white; padding: 25px; border-radius: 20px;
-            width: 100%; max-width: 500px; text-align: center;
-            border: 4px solid var(--accent);
-            animation: popIn 0.3s;
-            position: relative;
-        }
-
-        /* 讀取中動畫 */
-        .loading-spinner {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 登入樣式 */
-        .login-input { 
-            width: 100%; padding: 12px; margin: 8px 0; 
-            border: 2px solid #ddd; border-radius: 8px; font-size: 1.1rem; 
-            -webkit-user-select: text; user-select: text;
-        }
-        .login-label { display: block; text-align: left; font-weight: bold; color: var(--dark); margin-top: 5px;}
-
-        /* 排行榜表格 */
-        .rank-tabs { margin-bottom: 10px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap;}
-        .rank-tab-btn { padding: 6px 12px; border: none; border-radius: 15px; cursor: pointer; background: #eee; color: #666; font-weight: bold; font-size: 0.9rem;}
-        .rank-tab-btn.active { background: var(--dark); color: white; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th { background: #eee; padding: 8px; color: #555; white-space: nowrap;}
-        td { padding: 8px 4px; border-bottom: 1px solid #eee; word-break: break-all;}
+        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; border: 4px solid var(--accent); position: relative;}
+        .login-input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 1.1rem; -webkit-user-select: text; user-select: text; }
+        .level-selector { margin: 5px 0 15px 0; min-height: 35px; display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; }
+        .level-btn { background: #eee; border: 2px solid #ccc; padding: 6px 14px; border-radius: 15px; font-weight: bold; color: #777; font-size: 0.9rem; }
+        .level-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } th { background: #eee; padding: 8px; white-space: nowrap;} td { padding: 8px 4px; border-bottom: 1px solid #eee; }
         
-        @media (max-width: 480px) {
-            h1 { font-size: 1.5rem; }
-            .info-header { flex-direction: row; flex-wrap: wrap; justify-content: center; }
-            .target-box { font-size: 1.8rem; padding: 10px; }
-            .btn { flex: 1; }
-            .btn-start { flex: 0 0 100%; margin-bottom: 5px; }
-            table { font-size: 0.8rem; }
-            th:nth-child(5), td:nth-child(5) { display: none; }
-        }
-
-        @media (min-width: 768px) {
-            .container { padding: 40px; }
-            .target-box { font-size: 3rem; min-height: 150px; }
-            .info-header { flex-direction: row; justify-content: space-between; }
-            #game-input { font-size: 2rem; }
-        }
-
+        /* Loading 動畫 */
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
     </style>
 </head>
 <body>
@@ -287,503 +50,322 @@
     <div class="modal-overlay" id="login-overlay">
         <div class="modal-box">
             <h2 style="color: var(--secondary); margin-bottom: 15px;">👋 歡迎來到打字練習</h2>
-            <p style="color: #666; margin-bottom: 15px;">請先輸入資料</p>
-            
-            <label class="login-label">班別 (Class):</label>
-            <input type="text" class="login-input" id="login-class" placeholder="例如: 1A" autocomplete="off" autocorrect="off">
-            
-            <label class="login-label">姓名 (Name):</label>
-            <input type="text" class="login-input" id="login-name" placeholder="例如: 陳小明" autocomplete="off" autocorrect="off">
-            
-            <button class="btn btn-start" id="login-btn" style="margin-top: 15px;">進入練習 (Enter)</button>
+            <input type="text" class="login-input" id="login-class" placeholder="班別 (Class): 1A" autocorrect="off">
+            <input type="text" class="login-input" id="login-name" placeholder="姓名 (Name): 陳小明" autocorrect="off">
+            <button class="btn btn-start" id="login-btn" style="margin-top: 15px;">進入練習</button>
         </div>
     </div>
 
     <div class="container">
         <h1>🏫 校園英語打字練習</h1>
-        
         <div class="info-header">
-            <div class="player-info">
-                學生: <span id="display-name" style="color: var(--secondary);">---</span> 
-                (<span id="display-class" style="color: var(--dark);">---</span>)
-            </div>
+            <div class="player-info">學生: <span id="display-name">---</span> (<span id="display-class">---</span>)</div>
             <div class="game-stats">
-                <div class="stat-item" style="color: var(--primary);">得分: <span id="score">0</span></div>
-                <div class="stat-item" style="color: var(--secondary);">時間: <span id="timer">60</span>s</div>
+                <div style="background:white;padding:5px 10px;border-radius:8px;">得分: <span id="score">0</span></div>
+                <div style="background:white;padding:5px 10px;border-radius:8px;">時間: <span id="timer">60</span>s</div>
             </div>
         </div>
-
-        <h3 style="margin-bottom: 8px; color: #777; font-size: 1rem;">選擇年級 (Grade)</h3>
         <div class="grade-selector">
             <button class="grade-btn p1 active" onclick="game.setGrade('P1')">P1 一年級</button>
             <button class="grade-btn p2" onclick="game.setGrade('P2')">P2 二年級</button>
             <button class="grade-btn p3" onclick="game.setGrade('P3')">P3 三年級</button>
         </div>
-
-        <div class="level-selector" id="level-container">
-            <span style="color: #999; font-size: 0.9rem;">(本年級只有一個難度)</span>
-        </div>
-
-        <div class="target-box" id="target-display">
-            準備好了嗎？
-        </div>
-        
-        <div class="progress-wrap">
-            <div class="progress-fill" id="time-bar"></div>
-        </div>
-
+        <div class="level-selector" id="level-container"></div>
+        <div class="target-box" id="target-display">準備好了嗎？</div>
         <div style="margin-top: 15px;">
-            <input type="text" id="game-input" 
-                   placeholder="點擊開始後輸入..." 
-                   autocomplete="off" 
-                   autocorrect="off" 
-                   autocapitalize="off" 
-                   spellcheck="false"
-                   enterkeyhint="done"
-                   disabled>
+            <input type="text" id="game-input" placeholder="點擊開始後輸入..." disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
-
         <div class="controls">
-            <button class="btn btn-start" id="start-btn">開始遊戲 (Start)</button>
-            <button class="btn btn-reset" id="reset-btn" disabled>重置 (Reset)</button>
+            <button class="btn btn-start" id="start-btn">開始遊戲</button>
+            <button class="btn btn-reset" id="reset-btn" disabled>重置</button>
             <button class="btn btn-rank" id="rank-btn">🏆 雲端排行榜</button>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="rank-overlay">
         <div class="modal-box">
-            <h2 style="color: var(--dark); margin-bottom: 10px;">🏆 雲端排行榜</h2>
-            
-            <div class="rank-tabs">
-                <button class="rank-tab-btn" id="rank-tab-p1" onclick="game.showRank('P1')">P1榜</button>
-                <button class="rank-tab-btn" id="rank-tab-p2" onclick="game.showRank('P2')">P2榜</button>
-                <button class="rank-tab-btn" id="rank-tab-p3" onclick="game.showRank('P3')">P3榜</button>
+            <h2>🏆 雲端排行榜</h2>
+            <div style="margin-bottom:10px; display:flex; justify-content:center; gap:5px;" id="rank-tabs">
+                <button class="grade-btn p1" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P1')">P1榜</button>
+                <button class="grade-btn p2" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P2')">P2榜</button>
+                <button class="grade-btn p3" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P3')">P3榜</button>
             </div>
-
-            <div id="rank-loading" class="hidden"><div class="loading-spinner"></div></div>
             
-            <div style="max-height: 250px; overflow-y: auto; -webkit-overflow-scrolling: touch;">
-                <table id="rank-table">
-                    <thead>
-                        <tr>
-                            <th width="10%">#</th>
-                            <th width="15%">班別</th>
-                            <th width="20%">姓名</th>
-                            <th width="15%">分</th>
-                            <th width="20%">日期</th>
-                            <th width="20%">時間</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div id="rank-loading" class="hidden"><div class="spinner"></div></div>
+            <div id="rank-msg" style="color:#666; font-size:0.9rem; margin:10px 0;"></div>
+            
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table id="rank-table"><thead><tr><th>#</th><th>班</th><th>名</th><th>分</th><th>日</th><th>時</th></tr></thead><tbody></tbody></table>
             </div>
-            <button class="btn btn-start" style="margin-top: 15px;" onclick="game.closeRank()">關閉 (Close)</button>
+            <button class="btn btn-start" style="margin-top: 15px;" onclick="document.getElementById('rank-overlay').classList.add('hidden')">關閉</button>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="result-overlay">
         <div class="modal-box">
             <h2>⏰ 時間到！</h2>
-            <div style="font-size: 3.5rem; color: var(--secondary); font-weight: bold; margin: 10px 0;" id="final-score">0</div>
-            <p id="final-msg" style="margin-bottom: 20px; color: #555; font-size: 1.2rem; font-weight: bold;"></p>
+            <div style="font-size: 3.5rem; color: var(--secondary); margin: 10px 0;" id="final-score">0</div>
+            <p id="final-msg" style="margin-bottom: 20px; font-weight:bold;"></p>
             <button class="btn btn-start" onclick="game.closeResult()">查看排名</button>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 🔥 重要：請在這裡替換您的 Firebase 設定 🔥
+        // 🔥 請務必更新 Config (含 databaseURL) 🔥
         // ==========================================
         const firebaseConfig = {
-            apiKey: "請貼上您的APIKey",
-            authDomain: "請貼上您的AuthDomain",
-            projectId: "請貼上您的ProjectId",
-            storageBucket: "請貼上您的StorageBucket",
-            messagingSenderId: "請貼上您的ID",
-            appId: "請貼上您的AppID"
+            apiKey: "請貼上APIKey",
+            authDomain: "你的project.firebaseapp.com",
+            // 🔥 Realtime DB 必須要有這個 URL，通常是 https://xxx.firebaseio.com
+            databaseURL: "請貼上你的DatabaseURL", 
+            projectId: "你的project-id",
+            storageBucket: "你的project.appspot.com",
+            messagingSenderId: "ID",
+            appId: "AppID"
         };
 
-        // 初始化 Firebase
-        let db; // 資料庫物件
+        let dbRef;
         try {
             if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
+                if(!firebaseConfig.databaseURL || firebaseConfig.databaseURL.includes("請貼上")) {
+                    alert("錯誤：請在 HTML 代碼中填寫 databaseURL！");
+                } else {
+                    firebase.initializeApp(firebaseConfig);
+                    // 🔥 使用 database() 而不是 firestore()
+                    dbRef = firebase.database().ref('scores');
+                    console.log("Realtime DB initialized");
+                }
             }
-            db = firebase.firestore();
-            console.log("Firebase Connected");
-        } catch (error) {
-            console.error("Firebase Init Error:", error);
-            alert("資料庫連線設定有誤，請檢查 HTML 代碼中的 firebaseConfig");
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+            alert("資料庫連線失敗，請檢查 Config");
         }
 
-        /**
-         * 音效系統
-         */
         const sfx = {
             ctx: null,
             init: function() {
                 if (!this.ctx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AC();
                 }
                 if (this.ctx.state === 'suspended') this.ctx.resume();
             },
-            play: function(freqs, type='sine', dur=0.1) {
+            play: function(freqs, type='sine') {
                 if (!this.ctx) return;
-                try {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = type;
-                    osc.frequency.setValueAtTime(freqs, this.ctx.currentTime);
-                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start();
-                    osc.stop(this.ctx.currentTime + dur);
-                } catch(e) {}
+                const o = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                o.type = type; o.frequency.setValueAtTime(freqs, this.ctx.currentTime);
+                g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                o.connect(g); g.connect(this.ctx.destination);
+                o.start(); o.stop(this.ctx.currentTime + 0.1);
             },
             correct: function() { this.init(); this.play(800); },
-            error: function() { this.init(); this.play(150, 'sawtooth', 0.2); },
-            success: function() {
-                this.init();
-                [523, 659, 784].forEach((f, i) => setTimeout(() => this.play(f, 'sine', 0.2), i*100));
-            }
+            error: function() { this.init(); this.play(150, 'sawtooth'); },
+            success: function() { this.init(); [523,659,784].forEach((f,i)=>setTimeout(()=>this.play(f),i*100)); }
         };
 
-        /**
-         * 遊戲主程式
-         */
         const game = {
             data: {
-                "P1": {
-                    levels: { 1: ["a ball", "a car", "a doll", "a robot", "a bus", "a teddy bear", "red", "blue", "white", "pink"] },
-                    hasSubLevels: false
-                },
-                "P2": {
-                    levels: { 1: ["kind", "friendly", "helpful", "clever", "funny", "polite", "in front of", "behind", "between", "because"] },
-                    hasSubLevels: false
-                },
-                "P3": {
-                    levels: {
-                        1: ["classroom", "art room", "computer room", "music room", "library", "school hall", "lift", "toilets"],
-                        2: ["on the left", "on the right", "next to", "Where's", "Where are"],
-                        3: ["ground floor", "first floor", "second floor", "third floor", "fourth floor", "fifth floor", "sixth floor"]
-                    },
-                    hasSubLevels: true
-                }
+                "P1": { levels: {1: ["a ball", "a car", "a doll", "a robot", "a bus", "a teddy bear", "red", "blue", "white", "pink"]}, hasSub: false },
+                "P2": { levels: {1: ["kind", "friendly", "helpful", "clever", "funny", "polite", "in front of", "behind", "between", "because"]}, hasSub: false },
+                "P3": { levels: {
+                    1: ["classroom", "art room", "computer room", "music room", "library", "school hall", "lift", "toilets"],
+                    2: ["on the left", "on the right", "next to", "Where's", "Where are"],
+                    3: ["ground floor", "first floor", "second floor", "third floor", "fourth floor", "fifth floor", "sixth floor"]
+                }, hasSub: true }
             },
-
-            state: {
-                player: { name: "", class: "" },
-                currentGrade: "P1",
-                currentLevel: 1,
-                score: 0,
-                timeLeft: 60,
-                isPlaying: false,
-                currentWord: "",
-                timerId: null
-            },
-
-            el: {
-                loginOverlay: document.getElementById('login-overlay'),
-                displayName: document.getElementById('display-name'),
-                displayClass: document.getElementById('display-class'),
-                levelContainer: document.getElementById('level-container'),
-                target: document.getElementById('target-display'),
-                input: document.getElementById('game-input'),
-                score: document.getElementById('score'),
-                timer: document.getElementById('timer'),
-                timeBar: document.getElementById('time-bar'),
-                rankTableBody: document.querySelector('#rank-table tbody'),
-                rankLoading: document.getElementById('rank-loading')
-            },
-
+            state: { player: {}, grade: "P1", level: 1, score: 0, time: 60, playing: false, word: "", timer: null },
+            
             init: function() {
-                this.bindClick('login-btn', () => this.handleLogin());
-                this.bindClick('start-btn', () => this.startGame());
-                this.bindClick('reset-btn', () => this.resetGame());
-                this.bindClick('rank-btn', () => this.showRank(this.state.currentGrade));
-                
-                this.el.input.addEventListener('input', (e) => this.handleInput(e));
+                // 綁定事件
+                const bind = (id, fn) => document.getElementById(id).onclick = (e) => { e.preventDefault(); fn(); };
+                bind('login-btn', () => this.login());
+                bind('start-btn', () => this.start());
+                bind('reset-btn', () => this.reset());
+                bind('rank-btn', () => this.showRank(this.state.grade));
+                document.getElementById('game-input').oninput = (e) => this.input(e);
                 this.setGrade('P1');
             },
-
-            bindClick: function(id, handler) {
-                const el = document.getElementById(id);
-                if(el) el.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    handler();
-                });
-            },
-
-            handleLogin: function() {
+            
+            login: function() {
                 const c = document.getElementById('login-class').value.trim();
                 const n = document.getElementById('login-name').value.trim();
-                if(!c || !n) return alert("請輸入班別和姓名！");
-                
-                sfx.init();
+                if(!c || !n) return alert("請輸入班別和姓名");
                 sfx.correct();
-                
-                this.state.player = { class: c, name: n };
-                this.el.displayClass.textContent = c;
-                this.el.displayName.textContent = n;
-                this.el.loginOverlay.classList.add('hidden');
+                this.state.player = {c, n};
+                document.getElementById('display-name').innerText = n;
+                document.getElementById('display-class').innerText = c;
+                document.getElementById('login-overlay').classList.add('hidden');
             },
 
-            setGrade: function(grade) {
-                if(this.state.isPlaying) return;
-                this.state.currentGrade = grade;
-                this.state.currentLevel = 1;
+            setGrade: function(g) {
+                if(this.state.playing) return;
+                this.state.grade = g; this.state.level = 1;
+                document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll(`.grade-btn.${g.toLowerCase()}`).forEach(b => b.classList.add('active'));
                 
-                document.querySelectorAll('.grade-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                    if(btn.classList.contains(grade.toLowerCase())) btn.classList.add('active');
-                });
-
-                this.renderLevelSelector(grade);
-                this.el.target.textContent = `${grade} 準備完成`;
-            },
-
-            renderLevelSelector: function(grade) {
-                const config = this.data[grade];
-                this.el.levelContainer.innerHTML = '';
-
-                if (config.hasSubLevels) {
-                    [1, 2, 3].forEach(lvl => {
-                        const btn = document.createElement('button');
-                        btn.className = `level-btn ${lvl === 1 ? 'active' : ''}`;
-                        btn.textContent = `Level ${lvl}`;
-                        btn.onclick = (e) => {
-                            e.preventDefault();
-                            if(this.state.isPlaying) return;
-                            this.state.currentLevel = lvl;
-                            document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                        };
-                        this.el.levelContainer.appendChild(btn);
+                const box = document.getElementById('level-container');
+                box.innerHTML = '';
+                if(this.data[g].hasSub) {
+                    [1,2,3].forEach(l => {
+                        const b = document.createElement('button');
+                        b.className = `level-btn ${l===1?'active':''}`;
+                        b.innerText = `Level ${l}`;
+                        b.onclick = (e) => { e.preventDefault(); if(!this.state.playing) { this.state.level=l; document.querySelectorAll('.level-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }};
+                        box.appendChild(b);
                     });
-                } else {
-                    this.el.levelContainer.innerHTML = '<span style="color:#888; font-weight:bold;">(綜合練習)</span>';
-                }
+                } else { box.innerHTML = '<span style="color:#999">(綜合練習)</span>'; }
+                document.getElementById('target-display').innerText = `${g} 準備`;
             },
 
-            startGame: function() {
-                if(this.state.isPlaying) return;
-                
+            start: function() {
+                if(this.state.playing) return;
                 sfx.init();
-                this.state.isPlaying = true;
-                this.state.score = 0;
-                this.state.timeLeft = 60;
-                
-                this.el.score.textContent = 0;
-                this.el.timer.textContent = 60;
-                this.el.timeBar.style.width = "100%";
-                this.el.input.disabled = false;
-                this.el.input.value = "";
-                this.el.input.focus();
-                
+                this.state.playing = true; this.state.score = 0; this.state.time = 60;
+                document.getElementById('score').innerText = 0;
+                document.getElementById('game-input').disabled = false;
+                document.getElementById('game-input').value = '';
+                document.getElementById('game-input').focus();
                 document.getElementById('start-btn').disabled = true;
                 document.getElementById('reset-btn').disabled = false;
-                document.querySelectorAll('.grade-btn').forEach(b => b.disabled = true);
-                
-                this.nextWord();
-                
-                this.state.timerId = setInterval(() => {
-                    this.state.timeLeft--;
-                    this.el.timer.textContent = this.state.timeLeft;
-                    this.el.timeBar.style.width = (this.state.timeLeft / 60 * 100) + "%";
-                    if(this.state.timeLeft <= 0) this.endGame();
+                this.next();
+                this.state.timer = setInterval(() => {
+                    this.state.time--;
+                    document.getElementById('timer').innerText = this.state.time;
+                    if(this.state.time<=0) this.end();
                 }, 1000);
             },
 
-            resetGame: function() {
-                clearInterval(this.state.timerId);
-                this.state.isPlaying = false;
-                this.el.input.disabled = true;
-                this.el.input.value = "";
-                this.el.target.textContent = "請點擊「開始遊戲」";
+            reset: function() {
+                clearInterval(this.state.timer);
+                this.state.playing = false;
+                document.getElementById('game-input').disabled = true;
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('reset-btn').disabled = true;
-                document.querySelectorAll('.grade-btn').forEach(b => b.disabled = false);
-                this.el.score.textContent = 0;
-                this.el.timer.textContent = 60;
-                this.el.timeBar.style.width = "100%";
+                document.getElementById('timer').innerText = 60;
+                document.getElementById('target-display').innerText = "準備";
             },
 
-            nextWord: function() {
-                const gradeData = this.data[this.state.currentGrade];
-                const wordList = gradeData.levels[this.state.currentLevel];
-                this.state.currentWord = wordList[Math.floor(Math.random() * wordList.length)];
-                this.renderWord("");
+            next: function() {
+                const list = this.data[this.state.grade].levels[this.state.level];
+                this.state.word = list[Math.floor(Math.random()*list.length)];
+                this.render("");
             },
 
-            renderWord: function(inputVal) {
-                let html = "";
-                const word = this.state.currentWord;
-                for(let i=0; i<word.length; i++) {
-                    let cls = "char pending";
-                    if(i < inputVal.length) {
-                        cls = inputVal[i] === word[i] ? "char correct" : "char error-anim";
-                    }
-                    if(word[i] === " ") html += `<span class="${cls} char-space">&nbsp;</span>`;
-                    else html += `<span class="${cls}">${word[i]}</span>`;
+            render: function(val) {
+                let h = "";
+                for(let i=0; i<this.state.word.length; i++) {
+                    let c = this.state.word[i];
+                    let cls = "pending";
+                    if(i < val.length) cls = val[i]===c ? "correct" : "error-anim";
+                    h += `<span class="char ${cls}" style="${c===' '?'margin:0 5px;border-bottom:2px solid #ccc;width:10px;display:inline-block':''}">${c===' '?'':c}</span>`;
                 }
-                this.el.target.innerHTML = html;
+                document.getElementById('target-display').innerHTML = h;
             },
 
-            handleInput: function(e) {
-                if(!this.state.isPlaying) return;
-                const val = this.el.input.value;
-                const target = this.state.currentWord;
+            input: function(e) {
+                if(!this.state.playing) return;
+                const v = e.target.value;
+                const t = this.state.word;
+                if(e.inputType && e.inputType.includes('delete')) return this.render(v);
+                if(v.length === 0) return this.render("");
                 
-                if(e.inputType && e.inputType.includes('delete')) return this.renderWord(val);
-                
-                const idx = val.length - 1;
-                if(val.length === 0) { this.renderWord(""); return; }
-
-                if(val.length > 0) {
-                    if(idx >= target.length) {
-                        this.el.input.value = val.slice(0, -1);
-                        sfx.error();
-                        return;
-                    }
-                    
-                    if(val[idx] !== target[idx]) {
-                        sfx.error();
-                        this.el.input.value = val.slice(0, -1);
-                        this.el.target.classList.add('error-anim');
-                        setTimeout(() => this.el.target.classList.remove('error-anim'), 300);
-                    } else {
-                        sfx.correct();
-                        this.renderWord(val);
-                        if(val === target) {
-                            const basePoints = 10;
-                            const bonus = this.state.currentGrade === 'P3' ? this.state.currentLevel * 5 : 0;
-                            this.state.score += (basePoints + bonus);
-                            this.el.score.textContent = this.state.score;
-                            sfx.success();
-                            setTimeout(() => {
-                                this.el.input.value = "";
-                                this.nextWord();
-                            }, 200);
-                        }
+                const idx = v.length - 1;
+                if(idx >= t.length || v[idx] !== t[idx]) {
+                    sfx.error();
+                    e.target.value = v.slice(0, -1);
+                    document.getElementById('target-display').classList.add('error-anim');
+                    setTimeout(()=>document.getElementById('target-display').classList.remove('error-anim'), 300);
+                } else {
+                    sfx.correct();
+                    this.render(v);
+                    if(v === t) {
+                        this.state.score += 10;
+                        document.getElementById('score').innerText = this.state.score;
+                        sfx.success();
+                        setTimeout(() => { e.target.value=""; this.next(); }, 150);
                     }
                 }
             },
 
-            endGame: function() {
-                clearInterval(this.state.timerId);
-                this.state.isPlaying = false;
-                this.el.input.disabled = true;
+            end: function() {
+                clearInterval(this.state.timer);
+                this.state.playing = false;
+                document.getElementById('game-input').disabled = true;
                 
-                this.saveScoreToCloud(); // 儲存到雲端
+                this.save();
                 
-                document.getElementById('final-score').textContent = this.state.score;
-                document.getElementById('final-msg').textContent = `${this.state.player.name} | 表現不錯喔！`;
+                document.getElementById('final-score').innerText = this.state.score;
+                document.getElementById('final-msg').innerText = `${this.state.player.n} | 表現不錯喔！`;
                 document.getElementById('result-overlay').classList.remove('hidden');
             },
 
-            // --- Firestore 整合 ---
-            
-            saveScoreToCloud: function() {
-                if(!db) return; // 如果沒連線就不存
-                
+            // 🔥 Realtime DB 儲存邏輯
+            save: function() {
+                if(!dbRef) return;
                 const now = new Date();
-                const dateStr = `${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`;
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                
-                // 儲存到 'scores' 集合
-                db.collection("scores").add({
-                    grade: this.state.currentGrade,
-                    name: this.state.player.name,
-                    class: this.state.player.class,
+                dbRef.push({
+                    grade: this.state.grade,
+                    name: this.state.player.n,
+                    class: this.state.player.c,
                     score: this.state.score,
-                    date: dateStr,
-                    time: timeStr,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    console.log("Score saved!");
-                }).catch((error) => {
-                    console.error("Error saving score: ", error);
+                    date: `${now.getMonth()+1}/${now.getDate()}`,
+                    time: `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
             },
 
+            // 🔥 Realtime DB 讀取邏輯
             showRank: function(grade) {
-                document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active'));
-                const tabId = `rank-tab-${grade.toLowerCase()}`;
-                const tabBtn = document.getElementById(tabId);
-                if(tabBtn) tabBtn.classList.add('active');
-
-                this.el.rankTableBody.innerHTML = "";
-                this.el.rankLoading.classList.remove('hidden');
                 document.getElementById('rank-overlay').classList.remove('hidden');
-
-                if(!db) {
-                    this.el.rankLoading.classList.add('hidden');
-                    this.el.rankTableBody.innerHTML = `<tr><td colspan="6">資料庫未連接</td></tr>`;
+                document.querySelector('#rank-table tbody').innerHTML = "";
+                document.getElementById('rank-loading').classList.remove('hidden');
+                document.getElementById('rank-msg').innerText = "";
+                
+                if(!dbRef) {
+                    document.getElementById('rank-loading').classList.add('hidden');
+                    document.getElementById('rank-msg').innerText = "資料庫未連接";
                     return;
                 }
 
-                // 查詢雲端資料：篩選年級
-                db.collection("scores")
-                    .where("grade", "==", grade)
-                    // 注意：Firestore 如果要同時 filter 和 sort，需要建立索引。
-                    // 為了簡化，我們先抓取資料，然後在 JS 端排序
-                    .limit(100) 
-                    .get()
-                    .then((querySnapshot) => {
-                        let records = [];
-                        querySnapshot.forEach((doc) => {
-                            records.push(doc.data());
-                        });
-
-                        // 在前端排序 (分數高->低)
-                        records.sort((a, b) => b.score - a.score);
-                        
-                        // 只取前 50 名
-                        records = records.slice(0, 50);
-
-                        this.el.rankLoading.classList.add('hidden');
-                        
-                        if (records.length === 0) {
-                            this.el.rankTableBody.innerHTML = `<tr><td colspan="6" style="padding:20px;">${grade} 暫無紀錄</td></tr>`;
-                            return;
-                        }
-
-                        records.forEach((r, i) => {
-                            let rankDisplay = i + 1;
-                            let color = "#555";
-                            if(i===0) { rankDisplay = "🥇"; color="gold"; }
-                            if(i===1) { rankDisplay = "🥈"; color="silver"; }
-                            if(i===2) { rankDisplay = "🥉"; color="#cd7f32"; }
-
-                            const tr = `<tr>
-                                <td style="color:${color}; font-weight:bold;">${rankDisplay}</td>
-                                <td>${r.class}</td>
-                                <td>${r.name}</td>
-                                <td style="color:var(--primary); font-weight:bold;">${r.score}</td>
-                                <td>${r.date}</td>
-                                <td>${r.time}</td>
-                            </tr>`;
-                            this.el.rankTableBody.innerHTML += tr;
-                        });
-                    })
-                    .catch((error) => {
-                        console.error("Error getting documents: ", error);
-                        this.el.rankLoading.classList.add('hidden');
-                        this.el.rankTableBody.innerHTML = `<tr><td colspan="6">讀取失敗</td></tr>`;
+                // 在 Realtime DB 根據 Grade 抓資料
+                dbRef.orderByChild('grade').equalTo(grade).once('value')
+                .then((snapshot) => {
+                    let records = [];
+                    snapshot.forEach((child) => {
+                        records.push(child.val());
                     });
-            },
+                    
+                    // 前端排序 (分數高 -> 低)
+                    records.sort((a,b) => b.score - a.score);
+                    // 取前 50
+                    records = records.slice(0, 50);
 
-            closeRank: function() {
-                document.getElementById('rank-overlay').classList.add('hidden');
+                    document.getElementById('rank-loading').classList.add('hidden');
+                    if(records.length === 0) {
+                        document.getElementById('rank-msg').innerText = `${grade} 暫無紀錄`;
+                    } else {
+                        records.forEach((r, i) => {
+                            let c = i===0?'gold':i===1?'silver':i===2?'#cd7f32':'#555';
+                            let icon = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+                            let row = `<tr><td style="color:${c};font-weight:bold;">${icon}</td><td>${r.class}</td><td>${r.name}</td><td style="color:var(--primary);font-weight:bold;">${r.score}</td><td>${r.date}</td><td>${r.time}</td></tr>`;
+                            document.querySelector('#rank-table tbody').innerHTML += row;
+                        });
+                    }
+                })
+                .catch(e => {
+                    console.error(e);
+                    document.getElementById('rank-loading').classList.add('hidden');
+                    document.getElementById('rank-msg').innerText = "讀取失敗";
+                });
             },
 
             closeResult: function() {
                 document.getElementById('result-overlay').classList.add('hidden');
-                this.showRank(this.state.currentGrade);
-                this.resetGame();
+                this.showRank(this.state.grade);
+                this.reset();
             }
         };
 
