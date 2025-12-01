@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title> ESLCLGG英語打字練習 </title>
     
-    <!-- 引入 Firebase SDK (使用 8.10.1 兼容版，最穩定適合單一檔案) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        :root { --primary: #4ecdc4; --secondary: #ff6b6b; --dark: #1a535c; --accent: #ffd166; --p1-color: #ff9f43; --p2-color: #54a0ff; --p3-color: #5f27cd; }
+        :root { --primary: #4ecdc4; --secondary: #ff6b6b; --dark: #1a535c; --accent: #ffd166; --p1-color: #ff9f43; --p2-color: #54a0ff; --p3-color: #5f27cd; --chal-color: #2c3e50; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Comic Sans MS', sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-x: hidden; overscroll-behavior: none;}
         .container { background-color: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); width: 100%; max-width: 900px; padding: 20px; text-align: center; border: 4px solid #fff; position: relative; }
@@ -18,26 +17,56 @@
         .info-header { display: flex; flex-direction: column; gap: 10px; background-color: #f1f2f6; padding: 10px; border-radius: 12px; margin-bottom: 15px; }
         .player-info { font-size: 1rem; color: var(--dark); font-weight: bold; }
         .game-stats { display: flex; justify-content: center; gap: 10px; font-size: 1.1rem; font-weight: bold; }
+        
         .grade-selector { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-        .grade-btn { padding: 8px 16px; font-size: 1rem; border: none; border-radius: 20px; cursor: pointer; color: white; opacity: 0.6; }
-        .grade-btn.p1 { background: var(--p1-color); } .grade-btn.p2 { background: var(--p2-color); } .grade-btn.p3 { background: var(--p3-color); }
+        .grade-btn { padding: 8px 16px; font-size: 1rem; border: none; border-radius: 20px; cursor: pointer; color: white; opacity: 0.6; transition: 0.2s; }
+        .grade-btn.p1 { background: var(--p1-color); } 
+        .grade-btn.p2 { background: var(--p2-color); } 
+        .grade-btn.p3 { background: var(--p3-color); }
+        .grade-btn.challenge { background: var(--chal-color); font-weight: bold; border: 2px solid gold; }
         .grade-btn.active { opacity: 1; transform: scale(1.05); outline: 2px solid var(--dark); }
+        
         .target-box { background: #fff; border: 3px dashed var(--dark); border-radius: 12px; padding: 15px; margin: 10px 0; min-height: 100px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 2rem; font-family: 'Courier New', monospace; word-break: break-word; }
-        .char { margin: 0 1px; } .char-space { margin: 0 4px; border-bottom: 2px solid #ddd; width: 15px; display: inline-block; }
+        .char { margin: 0 1px; } 
         .correct { color: var(--primary); } .error-anim { color: var(--secondary); animation: shake 0.3s; } .pending { color: #ccc; }
+        
+        /* P1 Spelling Styles */
+        .scramble-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 15px; min-height: 60px; }
+        .scramble-btn { background: #fff; border: 2px solid var(--p1-color); color: var(--dark); font-size: 1.5rem; width: 45px; height: 45px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #ddd; transition: transform 0.1s; }
+        .scramble-btn:active { transform: translateY(4px); box-shadow: none; }
+        .scramble-btn.used { opacity: 0.3; pointer-events: none; border-color: #ccc; transform: translateY(4px); box-shadow: none; }
+        .p1-slot { display: inline-block; width: 30px; height: 40px; border-bottom: 3px solid #ccc; margin: 0 4px; text-align: center; color: var(--dark); }
+        .p1-slot.filled { border-color: var(--p1-color); }
+        .p1-slot.hint { color: #999; border-color: #eee; }
+
         #game-input { width: 100%; padding: 10px; font-size: 1.5rem; text-align: center; border: 3px solid #ccc; border-radius: 10px; outline: none; background: #f9f9f9; -webkit-user-select: text; user-select: text; }
         #game-input:focus { border-color: var(--primary); background: #fff; }
+        
         .controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         .btn { padding: 10px 20px; font-size: 1rem; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; }
         .btn-start { background: var(--primary); width: 100%; max-width: 200px; } .btn-reset { background: var(--secondary); } .btn-rank { background: var(--dark); }
+        
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .hidden { display: none !important; }
-        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; border: 4px solid var(--accent); position: relative;}
+        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; border: 4px solid var(--accent); position: relative; max-height: 90vh; overflow-y: auto;}
         .login-input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 1.1rem; -webkit-user-select: text; user-select: text; }
-        .level-selector { margin: 5px 0 15px 0; min-height: 35px; display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; }
-        .level-btn { background: #eee; border: 2px solid #ccc; padding: 6px 14px; border-radius: 15px; font-weight: bold; color: #777; font-size: 0.9rem; }
-        .level-btn.active { background: var(--dark); color: white; border-color: var(--dark); }
+        
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; } th { background: #eee; padding: 8px; white-space: nowrap;} td { padding: 8px 4px; border-bottom: 1px solid #eee; }
+        
+        /* MsDiane Admin Styles */
+        .admin-trigger { position: fixed; bottom: 10px; right: 10px; width: 30px; height: 30px; background: rgba(0,0,0,0.1); border-radius: 50%; cursor: pointer; z-index: 9000; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; }
+        .admin-trigger:hover { background: rgba(0,0,0,0.3); }
+        
+        .admin-nav { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+        .admin-tab-btn { flex: 1; padding: 10px; cursor: pointer; background: #f9f9f9; border: none; font-weight: bold; color: #777; }
+        .admin-tab-btn.active { background: white; color: var(--dark); border-bottom: 3px solid var(--dark); }
+        
+        .admin-panel-content { display: none; text-align: left; }
+        .admin-panel-content.active { display: block; }
+        
+        .admin-filter-bar { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        .btn-sm { padding: 5px 10px; font-size: 0.8rem; border-radius: 5px; cursor: pointer; border: none; color: white; }
+        .btn-del { background: #ff6b6b; } .btn-add { background: #4ecdc4; }
         
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -46,12 +75,88 @@
 </head>
 <body>
 
+    <div class="admin-trigger" onclick="admin.openLogin()">MsD</div>
+
     <div class="modal-overlay" id="login-overlay">
         <div class="modal-box">
             <h2 style="color: var(--secondary); margin-bottom: 15px;">👋 Welcome to my hub</h2>
             <input type="text" class="login-input" id="login-class" placeholder="Class: 1A" autocorrect="off">
             <input type="text" class="login-input" id="login-name" placeholder="Name: Diane" autocorrect="off">
             <button class="btn btn-start" id="login-btn" style="margin-top: 15px;">Start</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="admin-login-overlay">
+        <div class="modal-box" style="max-width: 300px;">
+            <h3>🔑 MsDiane Only</h3>
+            <input type="password" class="login-input" id="admin-pass" placeholder="Password">
+            <button class="btn btn-start" onclick="admin.login()">Login</button>
+            <button class="btn" onclick="document.getElementById('admin-login-overlay').classList.add('hidden')" style="background:#ccc; margin-top:5px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="admin-dash-overlay">
+        <div class="modal-box" style="max-width: 800px; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+            
+            <div style="padding: 15px; background: var(--dark); color: white; display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; font-size:1.2rem; color:white;">🛠️ Admin Panel</h2>
+                <button class="btn-sm" style="background:#444;" onclick="admin.close()">Exit</button>
+            </div>
+
+            <div class="admin-nav">
+                <button class="admin-tab-btn active" onclick="admin.switchTab('rank')">📊 成績管理 (Rankings)</button>
+                <button class="admin-tab-btn" onclick="admin.switchTab('word')">📝 字庫管理 (Words)</button>
+            </div>
+
+            <div style="padding: 15px; overflow-y: auto; flex: 1;">
+                
+                <div id="admin-tab-rank" class="admin-panel-content active">
+                    <div class="admin-filter-bar">
+                        <button class="grade-btn p1" onclick="admin.loadRanks('P1')">P1</button>
+                        <button class="grade-btn p2" onclick="admin.loadRanks('P2')">P2</button>
+                        <button class="grade-btn p3" onclick="admin.loadRanks('P3')">P3</button>
+                        <button class="grade-btn challenge" onclick="admin.loadRanks('Challenge')">Chall.</button>
+                        <button class="grade-btn" style="background:#333; color:white;" onclick="admin.loadRanks('ALL')">ALL</button>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <span id="admin-rank-status" style="font-weight:bold; color:#666;">Select a grade</span>
+                        <button class="btn-sm btn-del" onclick="admin.clearAllRanks()">⚠️ 清除此組所有紀錄 (Clear All)</button>
+                    </div>
+
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eee;">
+                        <table id="admin-rank-table">
+                            <thead><tr><th>G</th><th>Cls</th><th>Name</th><th>Score</th><th>Date/Time</th><th>Act</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="admin-tab-word" class="admin-panel-content">
+                    <div class="admin-filter-bar">
+                        <button class="grade-btn p1" onclick="admin.loadWords('P1')">P1 Words</button>
+                        <button class="grade-btn p2" onclick="admin.loadWords('P2')">P2 Words</button>
+                        <button class="grade-btn p3" onclick="admin.loadWords('P3')">P3 Words</button>
+                        <button class="grade-btn challenge" onclick="admin.loadWords('Challenge')">Chall. Words</button>
+                    </div>
+
+                    <div style="background:#f0f0f0; padding:10px; border-radius:8px; margin-bottom:10px;">
+                        <span id="admin-word-status" style="font-weight:bold; color:var(--dark); display:block; margin-bottom:5px;">Select grade to edit</span>
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="new-word-input" class="login-input" placeholder="New word/sentence..." style="margin:0; font-size:0.9rem;">
+                            <button class="btn-sm btn-add" onclick="admin.addWord()">Add</button>
+                        </div>
+                    </div>
+
+                    <div style="max-height: 350px; overflow-y: auto; border: 1px solid #eee;">
+                        <table id="admin-word-table">
+                            <thead><tr><th>Word / Sentence</th><th>Act</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
@@ -68,33 +173,41 @@
             <button class="grade-btn p1 active" onclick="game.setGrade('P1')">P1 一年級</button>
             <button class="grade-btn p2" onclick="game.setGrade('P2')">P2 二年級</button>
             <button class="grade-btn p3" onclick="game.setGrade('P3')">P3 三年級</button>
+            <button class="grade-btn challenge" onclick="game.setGrade('Challenge')">{挑戰MsDiane}</button>
         </div>
-        <div class="level-selector" id="level-container"></div>
+        
         <div class="target-box" id="target-display">準備好了嗎？</div>
-        <div style="margin-top: 15px;">
-            <input type="text" id="game-input" placeholder=" " disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        
+        <div id="p1-interface" class="hidden">
+            <div class="scramble-container" id="scramble-box"></div>
         </div>
+
+        <div id="typing-interface" style="margin-top: 15px;">
+            <input type="text" id="game-input" placeholder="Type here..." disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+
         <div class="controls">
-            <button class="btn btn-start" id="start-btn">開始遊戲start</button>
-            <button class="btn btn-reset" id="reset-btn" disabled>重置Reset</button>
-            <button class="btn btn-rank" id="rank-btn">🏆 排行榜Leaderboard</button>
+            <button class="btn btn-start" id="start-btn">開始遊戲 Start</button>
+            <button class="btn btn-reset" id="reset-btn" disabled>重置 Reset</button>
+            <button class="btn btn-rank" id="rank-btn">🏆 排行榜 Leaderboard</button>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="rank-overlay">
         <div class="modal-box">
-            <h2>🏆 排行榜Leaderboard</h2>
-            <div style="margin-bottom:10px; display:flex; justify-content:center; gap:5px;" id="rank-tabs">
+            <h2>🏆 排行榜 Leaderboard</h2>
+            <div style="margin-bottom:10px; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;" id="rank-tabs">
                 <button class="grade-btn p1" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P1')">P1</button>
                 <button class="grade-btn p2" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P2')">P2</button>
                 <button class="grade-btn p3" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('P3')">P3</button>
+                <button class="grade-btn challenge" style="font-size:0.8rem; padding:5px 10px;" onclick="game.showRank('Challenge')">Chall.</button>
             </div>
             
             <div id="rank-loading" class="hidden"><div class="spinner"></div></div>
             <div id="rank-msg" style="color:#666; font-size:0.9rem; margin:10px 0;"></div>
             
             <div style="max-height: 250px; overflow-y: auto;">
-                <table id="rank-table"><thead><tr><th>#</th><th>班Class</th><th>學生Name</th><th>Score</th><th>日期Date</th><th>時間Time</th></tr></thead><tbody></tbody></table>
+                <table id="rank-table"><thead><tr><th>#</th><th>Class</th><th>Name</th><th>Score</th></tr></thead><tbody></tbody></table>
             </div>
             <button class="btn btn-start" style="margin-top: 15px;" onclick="document.getElementById('rank-overlay').classList.add('hidden')">關閉</button>
         </div>
@@ -111,7 +224,7 @@
 
     <script>
         // ==========================================
-        // ✅ 已整合您的 Firebase 設定
+        // ✅ Firebase SDK Init
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyDU6GWmH-rgvqWvGC45hhqXE_p9wmErxaM",
@@ -124,17 +237,16 @@
             measurementId: "G-PHW409K7M3"
         };
 
-        let dbRef;
+        let dbRef, wordsRef;
         try {
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
-                // 初始化 Realtime Database 參照
                 dbRef = firebase.database().ref('scores');
+                wordsRef = firebase.database().ref('words');
                 console.log("Database initialized successfully!");
             }
         } catch (e) {
             console.error("Firebase Init Error:", e);
-            alert("初始化失敗：" + e.message);
         }
 
         const sfx = {
@@ -161,17 +273,22 @@
             success: function() { this.init(); [523,659,784].forEach((f,i)=>setTimeout(()=>this.play(f),i*100)); }
         };
 
+        // ==========================================
+        // ✅ Data & Migration Logic
+        // ==========================================
+        const defaultData = {
+            "P1": ["a ball", "a car", "a doll", "a robot", "a bus", "a teddy bear", "red", "blue", "white", "pink"],
+            "P2": ["kind", "friendly", "helpful", "clever", "funny", "polite", "in front of", "behind", "between", "because"],
+            "P3": ["classroom", "art room", "computer room", "music room", "library", "school hall", "lift", "toilets", "on the left", "on the right", "next to", "Where's", "Where are", "ground floor", "first floor", "second floor", "third floor", "fourth floor", "fifth floor", "sixth floor"],
+            "Challenge": ["MsDiane is cool", "English is fun"]
+        };
+
+        // ==========================================
+        // ✅ Game Logic
+        // ==========================================
         const game = {
-            data: {
-                "P1": { levels: {1: ["a ball", "a car", "a doll", "a robot", "a bus", "a teddy bear", "red", "blue", "white", "pink"]}, hasSub: false },
-                "P2": { levels: {1: ["kind", "friendly", "helpful", "clever", "funny", "polite", "in front of", "behind", "between", "because"]}, hasSub: false },
-                "P3": { levels: {
-                    1: ["classroom", "art room", "computer room", "music room", "library", "school hall", "lift", "toilets"],
-                    2: ["on the left", "on the right", "next to", "Where's", "Where are"],
-                    3: ["ground floor", "first floor", "second floor", "third floor", "fourth floor", "fifth floor", "sixth floor"]
-                }, hasSub: true }
-            },
-            state: { player: {}, grade: "P1", level: 1, score: 0, time: 60, playing: false, word: "", timer: null },
+            data: { "P1": [], "P2": [], "P3": [], "Challenge": [] },
+            state: { player: {}, grade: "P1", score: 0, time: 60, playing: false, word: "", currentP1Input: "", timer: null },
             
             init: function() {
                 const bind = (id, fn) => document.getElementById(id).onclick = (e) => { e.preventDefault(); fn(); };
@@ -180,7 +297,37 @@
                 bind('reset-btn', () => this.reset());
                 bind('rank-btn', () => this.showRank(this.state.grade));
                 document.getElementById('game-input').oninput = (e) => this.input(e);
+                
+                this.checkAndMigrateWords();
                 this.setGrade('P1');
+            },
+
+            checkAndMigrateWords: function() {
+                if(!wordsRef) return;
+                wordsRef.once('value', snapshot => {
+                    if(!snapshot.exists()) {
+                        wordsRef.child('P1').set(defaultData.P1); 
+                        wordsRef.child('P2').set(defaultData.P2);
+                        wordsRef.child('P3').set(defaultData.P3);
+                        wordsRef.child('Challenge').set(defaultData.Challenge);
+                    }
+                    this.listenToWords();
+                });
+            },
+
+            listenToWords: function() {
+                ['P1', 'P2', 'P3', 'Challenge'].forEach(g => {
+                    wordsRef.child(g).on('value', snap => {
+                        const val = snap.val();
+                        if (!val) {
+                            this.data[g] = []; 
+                        } else if (Array.isArray(val)) {
+                            this.data[g] = val; 
+                        } else {
+                            this.data[g] = Object.values(val);
+                        }
+                    });
+                });
             },
             
             login: function() {
@@ -196,22 +343,21 @@
 
             setGrade: function(g) {
                 if(this.state.playing) return;
-                this.state.grade = g; this.state.level = 1;
-                document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll(`.grade-btn.${g.toLowerCase()}`).forEach(b => b.classList.add('active'));
+                this.state.grade = g;
                 
-                const box = document.getElementById('level-container');
-                box.innerHTML = '';
-                if(this.data[g].hasSub) {
-                    [1,2,3].forEach(l => {
-                        const b = document.createElement('button');
-                        b.className = `level-btn ${l===1?'active':''}`;
-                        b.innerText = `Level ${l}`;
-                        b.onclick = (e) => { e.preventDefault(); if(!this.state.playing) { this.state.level=l; document.querySelectorAll('.level-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }};
-                        box.appendChild(b);
-                    });
-                } else { box.innerHTML = '<span style="color:#999"></span>'; }
-                document.getElementById('target-display').innerText = `${g} Get ready`;
+                document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+                const btn = Array.from(document.querySelectorAll('.grade-selector .grade-btn')).find(b => b.innerText.includes(g) || (g==='Challenge' && b.classList.contains('challenge')));
+                if(btn) btn.classList.add('active');
+                
+                if (g === 'P1') {
+                    document.getElementById('typing-interface').classList.add('hidden');
+                    document.getElementById('p1-interface').classList.remove('hidden');
+                } else {
+                    document.getElementById('typing-interface').classList.remove('hidden');
+                    document.getElementById('p1-interface').classList.add('hidden');
+                }
+                
+                document.getElementById('target-display').innerText = `${g === 'Challenge' ? 'Challenge MsDiane' : g} Get ready`;
             },
 
             start: function() {
@@ -219,11 +365,14 @@
                 sfx.init();
                 this.state.playing = true; this.state.score = 0; this.state.time = 60;
                 document.getElementById('score').innerText = 0;
+                
                 document.getElementById('game-input').disabled = false;
                 document.getElementById('game-input').value = '';
-                document.getElementById('game-input').focus();
+                if(this.state.grade !== 'P1') document.getElementById('game-input').focus();
+                
                 document.getElementById('start-btn').disabled = true;
                 document.getElementById('reset-btn').disabled = false;
+                
                 this.next();
                 this.state.timer = setInterval(() => {
                     this.state.time--;
@@ -239,13 +388,90 @@
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('reset-btn').disabled = true;
                 document.getElementById('timer').innerText = 60;
-                document.getElementById('target-display').innerText = "準備Get Ready";
+                document.getElementById('target-display').innerText = "準備 Get Ready";
+                document.getElementById('scramble-box').innerHTML = "";
             },
 
             next: function() {
-                const list = this.data[this.state.grade].levels[this.state.level];
-                this.state.word = list[Math.floor(Math.random()*list.length)];
-                this.render("");
+                const list = this.data[this.state.grade];
+                const pool = (list && list.length > 0) ? list : defaultData[this.state.grade] || ["Loading..."];
+                
+                this.state.word = pool[Math.floor(Math.random()*pool.length)];
+                
+                if (this.state.grade === 'P1') {
+                    this.state.currentP1Input = this.state.word.charAt(0);
+                    this.renderP1();
+                } else {
+                    this.render("");
+                }
+            },
+
+            renderP1: function() {
+                let slotsHtml = "";
+                const cleanWord = this.state.word;
+                
+                for(let i=0; i<cleanWord.length; i++) {
+                    const char = cleanWord[i];
+                    if(char === ' ') {
+                        slotsHtml += `<span style="display:inline-block;width:15px;"></span>`;
+                    } else if (i === 0) {
+                        slotsHtml += `<span class="p1-slot filled hint">${char}</span>`;
+                    } else {
+                        slotsHtml += `<span class="p1-slot"></span>`;
+                    }
+                }
+                document.getElementById('target-display').innerHTML = slotsHtml;
+                
+                const container = document.getElementById('scramble-box');
+                container.innerHTML = "";
+                
+                let chars = this.state.word.slice(1).split('').filter(c => c !== ' ').sort(() => Math.random() - 0.5);
+                
+                chars.forEach((char) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'scramble-btn';
+                    btn.innerText = char;
+                    btn.onclick = () => this.handleP1Click(char, btn);
+                    container.appendChild(btn);
+                });
+            },
+
+            handleP1Click: function(char, btnElem) {
+                if(!this.state.playing) return;
+                
+                const targetNoSpaces = this.state.word.replace(/ /g, '');
+                const currentInputLen = this.state.currentP1Input.length;
+                
+                if(currentInputLen >= targetNoSpaces.length) return; 
+
+                const expectedChar = targetNoSpaces[currentInputLen];
+                
+                if(char === expectedChar) {
+                    sfx.correct();
+                    this.state.currentP1Input += char;
+                    btnElem.classList.add('used');
+                    
+                    const slots = document.querySelectorAll('.p1-slot:not(.hint)');
+                    for(let s of slots) {
+                        if(!s.innerText) {
+                            s.innerText = char;
+                            s.classList.add('filled');
+                            s.classList.add('correct');
+                            break;
+                        }
+                    }
+
+                    if(this.state.currentP1Input === targetNoSpaces) {
+                        this.state.score += 10;
+                        document.getElementById('score').innerText = this.state.score;
+                        sfx.success();
+                        setTimeout(() => this.next(), 500);
+                    }
+                } else {
+                    sfx.error();
+                    btnElem.classList.add('error-anim');
+                    setTimeout(() => btnElem.classList.remove('error-anim'), 300);
+                }
             },
 
             render: function(val) {
@@ -292,7 +518,7 @@
                 this.save();
                 
                 document.getElementById('final-score').innerText = this.state.score;
-                document.getElementById('final-msg').innerText = `${this.state.player.n} | 表現不錯喔！Not bad`;
+                document.getElementById('final-msg').innerText = `${this.state.player.n} | Good Job!`;
                 document.getElementById('result-overlay').classList.remove('hidden');
             },
 
@@ -305,7 +531,7 @@
                     class: this.state.player.c,
                     score: this.state.score,
                     date: `${now.getMonth()+1}/${now.getDate()}`,
-                    time: `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
+                    time: `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
             },
@@ -316,40 +542,41 @@
                 document.getElementById('rank-loading').classList.remove('hidden');
                 document.getElementById('rank-msg').innerText = "";
                 
-                // 切換按鈕狀態
                 document.querySelectorAll('#rank-tabs .grade-btn').forEach(b => b.classList.remove('active'));
-                const targetBtn = Array.from(document.querySelectorAll('#rank-tabs .grade-btn')).find(b => b.innerText.includes(grade));
+                const targetBtn = Array.from(document.querySelectorAll('#rank-tabs .grade-btn')).find(b => b.innerText.includes(grade) || (grade === 'Challenge' && b.classList.contains('challenge')));
                 if(targetBtn) targetBtn.classList.add('active');
                 
-                if(!dbRef) {
-                    document.getElementById('rank-loading').classList.add('hidden');
-                    document.getElementById('rank-msg').innerText = "資料庫未連接";
-                    return;
-                }
+                if(!dbRef) return;
 
-                dbRef.orderByChild('grade').equalTo(grade).once('value')
+                dbRef.orderByChild('grade').equalTo(grade).limitToLast(50).once('value')
                 .then((snapshot) => {
                     let records = [];
                     snapshot.forEach((child) => { records.push(child.val()); });
                     records.sort((a,b) => b.score - a.score);
-                    records = records.slice(0, 50);
 
                     document.getElementById('rank-loading').classList.add('hidden');
                     if(records.length === 0) {
                         document.getElementById('rank-msg').innerText = `${grade} 暫無紀錄`;
                     } else {
+                        // Tie Logic Implementation
+                        let currentRank = 1;
                         records.forEach((r, i) => {
-                            let c = i===0?'gold':i===1?'silver':i===2?'#cd7f32':'#555';
-                            let icon = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-                            let row = `<tr><td style="color:${c};font-weight:bold;">${icon}</td><td>${r.class}</td><td>${r.name}</td><td style="color:var(--primary);font-weight:bold;">${r.score}</td><td>${r.date}</td><td>${r.time}</td></tr>`;
+                            if (i > 0 && r.score < records[i-1].score) {
+                                currentRank = i + 1; // Standard competition ranking: 1, 1, 3
+                            }
+                            
+                            let icon;
+                            if (currentRank === 1) icon = '🥇';
+                            else if (currentRank === 2) icon = '🥈';
+                            else if (currentRank === 3) icon = '🥉';
+                            else icon = currentRank;
+
+                            let color = currentRank===1?'gold':currentRank===2?'silver':currentRank===3?'#cd7f32':'#555';
+                            
+                            let row = `<tr><td style="color:${color};font-weight:bold;">${icon}</td><td>${r.class}</td><td>${r.name}</td><td style="color:var(--primary);font-weight:bold;">${r.score}</td></tr>`;
                             document.querySelector('#rank-table tbody').innerHTML += row;
                         });
                     }
-                })
-                .catch(e => {
-                    console.error(e);
-                    document.getElementById('rank-loading').classList.add('hidden');
-                    document.getElementById('rank-msg').innerText = "讀取失敗";
                 });
             },
 
@@ -357,6 +584,155 @@
                 document.getElementById('result-overlay').classList.add('hidden');
                 this.showRank(this.state.grade);
                 this.reset();
+            }
+        };
+        
+        // ==========================================
+        // ✅ Admin Logic (MsDiane)
+        // ==========================================
+        const admin = {
+            currentRankGrade: 'P1',
+            currentWordGrade: 'P1',
+            
+            openLogin: function() {
+                document.getElementById('admin-login-overlay').classList.remove('hidden');
+                document.getElementById('admin-pass').value = '';
+                document.getElementById('admin-pass').focus();
+            },
+            login: function() {
+                const p = document.getElementById('admin-pass').value;
+                if(p === "KliO199868") {
+                    document.getElementById('admin-login-overlay').classList.add('hidden');
+                    document.getElementById('admin-dash-overlay').classList.remove('hidden');
+                    this.switchTab('rank');
+                    this.loadRanks('P1');
+                } else {
+                    alert("Access Denied");
+                }
+            },
+            close: function() {
+                document.getElementById('admin-dash-overlay').classList.add('hidden');
+            },
+            
+            switchTab: function(tabName) {
+                document.querySelectorAll('.admin-panel-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.admin-tab-btn').forEach(el => el.classList.remove('active'));
+                
+                document.getElementById(`admin-tab-${tabName}`).classList.add('active');
+                const btns = document.querySelectorAll('.admin-tab-btn');
+                if(tabName === 'rank') btns[0].classList.add('active');
+                if(tabName === 'word') {
+                    btns[1].classList.add('active');
+                    this.loadWords('P1');
+                }
+            },
+
+            loadRanks: function(grade) {
+                this.currentRankGrade = grade;
+                document.getElementById('admin-rank-status').innerText = `Viewing: ${grade}`;
+                const tbody = document.querySelector('#admin-rank-table tbody');
+                tbody.innerHTML = '<tr><td colspan="6"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:5px auto;"></div></td></tr>';
+                
+                // FORCE READ ALL: Removed any .limitToLast() constraints
+                let query;
+                if(grade === 'ALL') {
+                    // Directly read root to ensure nothing is missed
+                    query = dbRef; 
+                } else {
+                    query = dbRef.orderByChild('grade').equalTo(grade);
+                }
+
+                query.once('value', snap => {
+                    tbody.innerHTML = "";
+                    if(!snap.exists()) { tbody.innerHTML = "<tr><td colspan='6'>No data</td></tr>"; return; }
+                    
+                    let data = [];
+                    // Force loop over all children
+                    snap.forEach(c => {
+                        const val = c.val();
+                        // For 'ALL', the structure might be flat, for equalTo it's filtered
+                        // We check if it has the basic fields to ensure it's a record
+                        if(val && val.name && val.score !== undefined) {
+                            // If filtering by ALL, push everything. If specific grade, the query handled it.
+                            if(grade === 'ALL' || val.grade === grade) {
+                                data.push({key: c.key, ...val});
+                            }
+                        }
+                    });
+                    
+                    data.sort((a,b) => b.score - a.score); 
+                    
+                    data.forEach(r => {
+                        const tr = document.createElement('tr');
+                        const dt = `${r.date || '-'} ${r.time || ''}`;
+                        tr.innerHTML = `<td>${r.grade}</td><td>${r.class}</td><td>${r.name}</td><td>${r.score}</td><td style="font-size:0.8rem;color:#666;">${dt}</td><td><button class="btn-sm btn-del" onclick="admin.delRank('${r.key}')">X</button></td>`;
+                        tbody.appendChild(tr);
+                    });
+                });
+            },
+            delRank: function(key) {
+                if(confirm("Confirm delete?")) {
+                    dbRef.child(key).remove().then(() => this.loadRanks(this.currentRankGrade));
+                }
+            },
+            clearAllRanks: function() {
+                if(confirm(`⚠️ WARNING: DELETE ALL ${this.currentRankGrade} records? This cannot be undone.`)) {
+                    const grade = this.currentRankGrade;
+                    if (grade === 'ALL') {
+                         if(confirm("REALLY delete EVERYTHING (All Grades)?")) {
+                             dbRef.remove().then(() => { alert("Cleared DB."); this.loadRanks('ALL'); });
+                         }
+                    } else {
+                        dbRef.orderByChild('grade').equalTo(grade).once('value', snap => {
+                            const updates = {};
+                            snap.forEach(c => updates[c.key] = null);
+                            dbRef.update(updates).then(() => {
+                                alert("Cleared.");
+                                this.loadRanks(grade);
+                            });
+                        });
+                    }
+                }
+            },
+
+            loadWords: function(grade) {
+                this.currentWordGrade = grade;
+                document.getElementById('admin-word-status').innerText = `Editing: ${grade}`;
+                const tbody = document.querySelector('#admin-word-table tbody');
+                tbody.innerHTML = '<tr><td colspan="2">Loading...</td></tr>';
+                
+                wordsRef.child(grade).once('value', snap => {
+                    tbody.innerHTML = "";
+                    if(!snap.exists()) { tbody.innerHTML = "<tr><td colspan='2'>No words found</td></tr>"; return; }
+                    
+                    const val = snap.val();
+                    let items = [];
+                    if(Array.isArray(val)) {
+                        val.forEach((w, i) => items.push({key: i, val: w}));
+                    } else {
+                        Object.keys(val).forEach(k => items.push({key: k, val: val[k]}));
+                    }
+
+                    items.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td style="text-align:left;">${item.val}</td><td><button class="btn-sm btn-del" onclick="admin.delWord('${item.key}')">X</button></td>`;
+                        tbody.appendChild(tr);
+                    });
+                });
+            },
+            addWord: function() {
+                const w = document.getElementById('new-word-input').value.trim();
+                if(w) {
+                    wordsRef.child(this.currentWordGrade).push(w).then(() => {
+                        document.getElementById('new-word-input').value = "";
+                        this.loadWords(this.currentWordGrade);
+                    });
+                }
+            },
+            delWord: function(key) {
+                if(confirm("Delete this word?")) {
+                    wordsRef.child(this.currentWordGrade).child(key).remove().then(() => this.loadWords(this.currentWordGrade));
+                }
             }
         };
 
