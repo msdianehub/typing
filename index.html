@@ -10,10 +10,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <!-- ✅ 新增這行 -->
 
     <style>
         :root { --primary: #4ecdc4; --secondary: #ff6b6b; --dark: #1a535c; --accent: #ffd166; --p1-color: #ff9f43; --p2-color: #54a0ff; --p3-color: #5f27cd; --chal-color: #2c3e50; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Comic Sans MS', sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Comic Sans Ms', sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-x: hidden; overscroll-behavior: none;}
         .container { background-color: white; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); width: 100%; max-width: 900px; padding: 20px; text-align: center; border: 4px solid #fff; position: relative; }
         h1 { color: var(--dark); margin-bottom: 10px; font-size: 1.8rem; }
@@ -112,6 +113,19 @@
         .file-input-label:hover { background: #3dbcb4; }
         .upload-progress { width: 100%; height: 5px; background: #eee; border-radius: 3px; margin: 5px 0; }
         .upload-progress-bar { height: 100%; background: #4ecdc4; border-radius: 3px; transition: width 0.3s; }
+        
+        /* ✅ 新增：載入中樣式 */
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -136,8 +150,9 @@
     <div class="modal-overlay hidden" id="admin-login-overlay">
         <div class="modal-box" style="max-width: 300px;">
             <h3>🔑 MsDiane Only</h3>
-            <input type="password" class="login-input" id="admin-pass" placeholder="Password">
-            <button class="btn btn-start" onclick="admin.login()">Login</button>
+            <input type="password" class="login-input" id="admin-pass" placeholder="Password" autocomplete="off">
+            <button class="btn btn-start" onclick="admin.login()" id="admin-login-btn">Login</button>
+            <div id="admin-login-status" style="margin-top:10px; font-size:0.9rem; min-height:20px;"></div>
             <button class="btn" onclick="document.getElementById('admin-login-overlay').classList.add('hidden')" style="background:#ccc; margin-top:5px;">Cancel</button>
         </div>
     </div>
@@ -390,7 +405,8 @@
             measurementId: "G-PHW409K7M3"
         };
 
-        let dbRef, wordsRef, adsRef, storageRef;
+        let dbRef, wordsRef, adsRef, storageRef, authRef; // ✅ 新增 authRef
+
         try {
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
@@ -398,6 +414,7 @@
                 wordsRef = firebase.database().ref('words');
                 adsRef = firebase.database().ref('ads');
                 storageRef = firebase.storage().ref();
+                authRef = firebase.auth(); // ✅ 新增這行
                 console.log("Firebase initialized successfully!");
             }
         } catch (e) {
@@ -851,31 +868,119 @@
         };
         
         // ==========================================
-        // ✅ Admin Logic (MsDiane)
+        // ✅ Admin Logic (MsDiane) - 修改版
         // ==========================================
         const admin = {
             currentRankGrade: 'P1',
             currentWordGrade: 'P1',
             selectedRanks: new Set(),
             uploadedImageUrl: null,
+            adminEmail: "dianeleongci@gmail.com", // ✅ 這裡設定你的管理員郵箱
             
             openLogin: function() {
+                // 確保登出狀態
+                if (authRef) {
+                    authRef.signOut();
+                }
+                localStorage.removeItem('adminLoggedIn');
+                
                 document.getElementById('admin-login-overlay').classList.remove('hidden');
                 document.getElementById('admin-pass').value = '';
                 document.getElementById('admin-pass').focus();
+                document.getElementById('admin-login-status').innerHTML = '';
             },
-            login: function() {
-                const p = document.getElementById('admin-pass').value;
-                if(p === "KliO199868") {
-                    document.getElementById('admin-login-overlay').classList.add('hidden');
-                    document.getElementById('admin-dash-overlay').classList.remove('hidden');
-                    this.switchTab('rank');
-                    this.loadRanks('P1');
-                } else {
-                    alert("Access Denied");
+            
+            login: async function() {
+                const password = document.getElementById('admin-pass').value;
+                
+                if (!password) {
+                    alert("請輸入密碼");
+                    return;
+                }
+                
+                // 顯示載入狀態
+                const loginBtn = document.getElementById('admin-login-btn');
+                const originalText = loginBtn.textContent;
+                loginBtn.textContent = "驗證中...";
+                loginBtn.disabled = true;
+                
+                // 顯示載入動畫
+                const statusDiv = document.getElementById('admin-login-status');
+                statusDiv.innerHTML = '<span class="loading-spinner"></span>';
+                
+                try {
+                    // ✅ 使用 Firebase Authentication 驗證
+                    const userCredential = await authRef.signInWithEmailAndPassword(
+                        this.adminEmail,
+                        password
+                    );
+                    
+                    const user = userCredential.user;
+                    
+                    // 檢查是否為管理員郵箱
+                    if (user.email === this.adminEmail) {
+                        // ✅ 登入成功
+                        statusDiv.innerHTML = '<span style="color:green;">✓ 登入成功</span>';
+                        
+                        // 延遲一下讓使用者看到成功訊息
+                        setTimeout(() => {
+                            document.getElementById('admin-login-overlay').classList.add('hidden');
+                            document.getElementById('admin-dash-overlay').classList.remove('hidden');
+                            this.switchTab('rank');
+                            this.loadRanks('P1');
+                            
+                            // 保存登入狀態（可選）
+                            localStorage.setItem('adminLoggedIn', 'true');
+                        }, 500);
+                        
+                    } else {
+                        // ❌ 不是管理員
+                        await authRef.signOut();
+                        statusDiv.innerHTML = '<span style="color:red;">✗ 權限不足</span>';
+                        setTimeout(() => {
+                            alert("Access Denied - 權限不足");
+                        }, 100);
+                    }
+                    
+                } catch (error) {
+                    // Firebase 錯誤處理
+                    console.error("Login error:", error);
+                    
+                    let errorMessage = "登入錯誤";
+                    if (error.code === 'auth/wrong-password') {
+                        errorMessage = "密碼錯誤";
+                    } else if (error.code === 'auth/user-not-found') {
+                        errorMessage = "管理員帳戶不存在";
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = "郵箱格式錯誤";
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMessage = "嘗試次數過多，請稍後再試";
+                    } else {
+                        errorMessage = "登入錯誤: " + error.message;
+                    }
+                    
+                    statusDiv.innerHTML = `<span style="color:red;">✗ ${errorMessage}</span>`;
+                    
+                } finally {
+                    // 恢復按鈕狀態
+                    loginBtn.textContent = originalText;
+                    loginBtn.disabled = false;
+                    
+                    // 3秒後清除狀態訊息
+                    setTimeout(() => {
+                        statusDiv.innerHTML = '';
+                    }, 3000);
                 }
             },
+            
             close: function() {
+                // 登出 Firebase
+                if (authRef) {
+                    authRef.signOut();
+                }
+                // 清除本地存儲
+                localStorage.removeItem('adminLoggedIn');
+                // 關閉面板
                 document.getElementById('admin-dash-overlay').classList.add('hidden');
             },
             
@@ -1538,6 +1643,19 @@
                 }
             }
         };
+
+        // ✅ 監聽認證狀態變化
+        if (authRef) {
+            authRef.onAuthStateChanged((user) => {
+                if (user && user.email === admin.adminEmail) {
+                    // 自動保持登入狀態
+                    console.log("Admin is logged in");
+                } else {
+                    // 確保登出狀態
+                    localStorage.removeItem('adminLoggedIn');
+                }
+            });
+        }
 
         window.onload = () => game.init();
     </script>
